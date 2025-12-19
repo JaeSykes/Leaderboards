@@ -145,39 +145,40 @@ async def parse_bot_embeds(bot, message):
     if not message.embeds:
         return
     
+    # Ignore own bot embeds
+    if message.author.id == bot.user.id:
+        return
+    
     embed = message.embeds[0]
     bot_username = message.author.name
-    
-    # 🔍 DEBUG: Loguj jaké jméno vidíš
-    logger.info(f'🔍 [DEBUG] Bot embed from: "{bot_username}" | Hledám: {list(BOT_NAMES.values())}')
-    logger.info(f'    Embed title: {embed.title}')
-    logger.info(f'    Embed description first 100 chars: {str(embed.description)[:100] if embed.description else "None"}')
     
     try:
         # Apollo Bot - Event attendance
         if bot_username == BOT_NAMES['apollo'] and embed.description:
-            logger.info(f'✅ [MATCH] Apollo bot detected!')
             await parse_apollo_embed(guild, embed)
         
         # Party Maker Bot - Party creation
         elif bot_username == BOT_NAMES['party_maker'] and embed.description:
-            logger.info(f'✅ [MATCH] Party Maker bot detected!')
             await parse_party_embed(guild, embed)
         
         # Rental Bot - Rentals
         elif bot_username == BOT_NAMES['rental'] and embed.description:
-            logger.info(f'✅ [MATCH] Rental bot detected!')
             await parse_rental_embed(guild, embed)
-        else:
-            logger.info(f'⚠️ [NO MATCH] Bot "{bot_username}" není v BOT_NAMES')
+        
+        # Navrátil Bot - Rentals (fallback)
+        elif bot_username == BOT_NAMES['rental'] and embed.description:
+            await parse_rental_embed(guild, embed)
     
     except Exception as e:
-        logger.error(f'❌ Error parsing embed from {bot_username}: {e}', exc_info=True)
+        logger.error(f'Error parsing embed from {bot_username}: {e}', exc_info=True)
 
 
 async def parse_apollo_embed(guild, embed):
     """Parse Apollo bot event attendance"""
     desc = embed.description
+    
+    if not desc:
+        return
     
     # Find "Accepted (N)" section
     accepted_pattern = r'✅ Accepted \((\d+)\)([\s\S]*?)(?=❌|$)'
@@ -200,8 +201,11 @@ async def parse_party_embed(guild, embed):
     """Parse Party Maker bot party creation"""
     desc = embed.description
     
+    if not desc:
+        return
+    
     # Find party creator "Založatel: @user"
-    creator_pattern = r'Založatel:\s*<@!?(\d+)>'
+    creator_pattern = r'[Zz]akladatel[a]?:\s*<@!?(\d+)>'
     match = re.search(creator_pattern, desc)
     
     if match:
@@ -217,6 +221,9 @@ async def parse_party_embed(guild, embed):
 async def parse_rental_embed(guild, embed):
     """Parse Rental bot rental usage"""
     desc = embed.description
+    
+    if not desc:
+        return
     
     # Find rental owner "Má: @user"
     owner_pattern = r'Má:\s*<@!?(\d+)>'
