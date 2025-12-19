@@ -99,7 +99,7 @@ def setup_trackers(bot):
         if after.bot:
             return
         
-        user_id = str(after.user.id)
+        user_id = str(after.user_id)
         username = after.user.name
         
         # Find Lineage activity
