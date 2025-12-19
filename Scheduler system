@@ -1,0 +1,53 @@
+// src/scheduler.js
+const cron = require('node-cron');
+const { updateLeaderboard, announceMonthlyWinners } = require('./leaderboard');
+const { resetMonthlyStats } = require('./database');
+
+function startScheduler(client) {
+  // Update leaderboard every 5 minutes
+  cron.schedule('*/5 * * * *', async () => {
+    console.log('⏰ Running 5-minute leaderboard update...');
+    await updateLeaderboard(client);
+  });
+
+  // Monthly reset at 8:00 AM on last day of month (Europe/Prague timezone)
+  // Check every day at 8:00 AM if it's the last day of the month
+  cron.schedule('0 8 * * *', async () => {
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    // Check if tomorrow is a new month (today is last day)
+    if (tomorrow.getMonth() !== now.getMonth()) {
+      console.log('🗓️ Running monthly reset...');
+      
+      // Announce winners before reset
+      await announceMonthlyWinners(client);
+      
+      // Wait a bit to ensure announcement is sent
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Reset monthly stats
+      await resetMonthlyStats();
+      
+      // Update leaderboard to show empty monthly stats
+      await updateLeaderboard(client);
+      
+      console.log('✅ Monthly reset complete');
+    }
+  }, {
+    timezone: 'Europe/Prague'
+  });
+
+  // Also run initial update on startup
+  setTimeout(() => {
+    console.log('🚀 Running initial leaderboard update...');
+    updateLeaderboard(client);
+  }, 5000);
+
+  console.log('✅ Scheduler configured:');
+  console.log('   - Leaderboard updates: Every 5 minutes');
+  console.log('   - Monthly reset: Last day of month at 8:00 AM (Europe/Prague)');
+}
+
+module.exports = { startScheduler };
