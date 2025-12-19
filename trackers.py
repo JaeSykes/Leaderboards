@@ -1,5 +1,5 @@
 """
-Event Trackers and Embed Parsers - S DEBUG LOGGINGEM
+Event Trackers and Embed Parsers
 Tracks all user activities and parses bot embeds
 """
 
@@ -150,6 +150,8 @@ async def parse_bot_embeds(bot, message):
     
     # 🔍 DEBUG: Loguj jaké jméno vidíš
     logger.info(f'🔍 [DEBUG] Bot embed from: "{bot_username}" | Hledám: {list(BOT_NAMES.values())}')
+    logger.info(f'    Embed title: {embed.title}')
+    logger.info(f'    Embed description first 100 chars: {str(embed.description)[:100] if embed.description else "None"}')
     
     try:
         # Apollo Bot - Event attendance
@@ -170,7 +172,7 @@ async def parse_bot_embeds(bot, message):
             logger.info(f'⚠️ [NO MATCH] Bot "{bot_username}" není v BOT_NAMES')
     
     except Exception as e:
-        logger.error(f'❌ Error parsing embed from {bot_username}: {e}')
+        logger.error(f'❌ Error parsing embed from {bot_username}: {e}', exc_info=True)
 
 
 async def parse_apollo_embed(guild, embed):
