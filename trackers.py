@@ -99,8 +99,14 @@ def setup_trackers(bot):
         if after.bot:
             return
         
-        user_id = str(after.user_id)
-        username = after.user.name
+        user_id = str(after.id)
+        
+        # Get member for username
+        try:
+            member = await after.guild.fetch_member(int(user_id))
+            username = member.name
+        except Exception:
+            return
         
         # Find Lineage activity
         old_activity = None
