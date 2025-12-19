@@ -26,7 +26,7 @@ MONTHLY_RESET_TIMEZONE = 'Europe/Prague'
 BOT_PREFIX = '!'
 BOT_ACTIVITY = 'Lineage 2 Stats'
 
-# Category Names (for leaderboard display)
+# Category Names (for leaderboard display) - CP Turnover REMOVED ✅
 STAT_CATEGORIES = {
     'voice_time': '🎙️ Voice Channel Time',
     'message_count': '💬 Message Count',
@@ -34,17 +34,16 @@ STAT_CATEGORIES = {
     'reaction_count': '👍 Reactions Received',
     'apollo_events': '📅 Event Attendance',
     'party_count': '👥 Parties Created',
-    'cp_turnover': '💰 CP Turnover',
     'aq_calls': '📢 AQ UP Calls',
-    'rental_count': '🔑 Rentals Used',
-    'screenshot_count': '📸 Screenshots'
+    'rental_count': '🔑 Půjčovna',
+    'screenshot_count': '📸 Screenshots DKP'
 }
 
 # Formatting
 TIME_FORMAT = '%d.%m.%Y %H:%M:%S'
-EMBED_COLOR_MONTHLY = 0x3498db  # Blue
-EMBED_COLOR_OVERALL = 0x2ecc71  # Green
-EMBED_COLOR_ANNOUNCEMENT = 0xf39c12  # Orange
+EMBED_COLOR_MONTHLY = 0x3498db # Blue
+EMBED_COLOR_OVERALL = 0x2ecc71 # Green
+EMBED_COLOR_ANNOUNCEMENT = 0xf39c12 # Orange
 
 # Bot Usernames (for embed parsing)
 BOT_NAMES = {
