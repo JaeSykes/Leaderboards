@@ -108,31 +108,31 @@ def setup_trackers(bot):
         except Exception:
             return
         
-        # Find Lineage activity
+        # Find L2Reborn activity (hledá cokoliv s "L2Reborn" v názvu) ✅
         old_activity = None
         new_activity = None
         
         if before and before.activities:
             old_activity = next(
-                (a for a in before.activities if 'Lineage' in a.name),
+                (a for a in before.activities if 'L2Reborn' in a.name),
                 None
             )
         
         if after.activities:
             new_activity = next(
-                (a for a in after.activities if 'Lineage' in a.name),
+                (a for a in after.activities if 'L2Reborn' in a.name),
                 None
             )
         
-        # Started playing Lineage
+        # Started playing L2Reborn
         if not old_activity and new_activity:
             start_activity_session(user_id, username)
-            logger.info(f'⚔️ {username} started playing Lineage 2')
+            logger.info(f'⚔️ {username} started playing L2Reborn')
         
-        # Stopped playing Lineage
+        # Stopped playing L2Reborn
         elif old_activity and not new_activity:
             end_activity_session(user_id, username)
-            logger.info(f'⚔️ {username} stopped playing Lineage 2')
+            logger.info(f'⚔️ {username} stopped playing L2Reborn')
     
     
     logger.info('✅ All event trackers registered')
