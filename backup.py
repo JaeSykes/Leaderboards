@@ -1,9 +1,11 @@
 """
 Google Drive Backup System for Stats Database
 Automatic daily backups at 3 AM CET
+Uses Railway environment variables for secure credential storage
 """
 
 import os
+import json
 import shutil
 import logging
 from datetime import datetime, timedelta
@@ -19,9 +21,9 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# Google Drive configuration
-GDRIVE_FOLDER_ID = os.getenv('GDRIVE_BACKUP_FOLDER_ID')  # Set in Railway env
-SERVICE_ACCOUNT_JSON = 'credentials/google_service_account.json'
+# Google Drive configuration - reads from Railway environment variables
+GDRIVE_FOLDER_ID = os.getenv('GDRIVE_BACKUP_FOLDER_ID')
+GOOGLE_SERVICE_ACCOUNT_JSON = os.getenv('GOOGLE_SERVICE_ACCOUNT_JSON')
 DB_PATH = 'data/stats.db'
 BACKUP_DIR = 'backups'
 MAX_LOCAL_BACKUPS = 7  # Keep 7 days locally
@@ -44,18 +46,27 @@ class GoogleDriveBackup:
             logger.warning(f'⚠️ Google Drive auth failed: {e}')
     
     def _authenticate(self):
-        """Authenticate with Google Drive using service account"""
-        if not os.path.exists(SERVICE_ACCOUNT_JSON):
-            logger.warning(f'⚠️ Service account file not found: {SERVICE_ACCOUNT_JSON}')
+        """Authenticate with Google Drive using service account JSON from Railway env"""
+        if not GOOGLE_SERVICE_ACCOUNT_JSON:
+            logger.warning('⚠️ GOOGLE_SERVICE_ACCOUNT_JSON environment variable not set')
             return
         
-        credentials = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_JSON,
-            scopes=['https://www.googleapis.com/auth/drive']
-        )
+        try:
+            # Parse JSON from environment variable
+            service_account_info = json.loads(GOOGLE_SERVICE_ACCOUNT_JSON)
+            
+            credentials = service_account.Credentials.from_service_account_info(
+                service_account_info,
+                scopes=['https://www.googleapis.com/auth/drive']
+            )
+            
+            self.service = build('drive', 'v3', credentials=credentials)
+            logger.info('✅ Google Drive authenticated')
         
-        self.service = build('drive', 'v3', credentials=credentials)
-        logger.info('✅ Google Drive authenticated')
+        except json.JSONDecodeError as e:
+            logger.warning(f'⚠️ Failed to parse service account JSON: {e}')
+        except Exception as e:
+            logger.warning(f'⚠️ Google Drive authentication failed: {e}')
     
     def upload_backup(self, file_path: str, file_name: str) -> bool:
         """Upload backup to Google Drive"""
@@ -212,7 +223,7 @@ async def perform_backup():
     LocalBackup.cleanup_old_backups()
     
     # Google Drive backup
-    if GDRIVE_AVAILABLE and GDRIVE_FOLDER_ID:
+    if GDRIVE_AVAILABLE and GDRIVE_FOLDER_ID and GOOGLE_SERVICE_ACCOUNT_JSON:
         gdrive = GoogleDriveBackup()
         backup_name = os.path.basename(local_path)
         gdrive.upload_backup(local_path, backup_name)
