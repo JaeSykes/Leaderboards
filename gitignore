@@ -1,0 +1,10 @@
+.env
+.env.local
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+data/stats.db
+.DS_Store
+*.log
