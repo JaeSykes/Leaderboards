@@ -1,5 +1,5 @@
 """
-Updated trackers.py - Tracks rental interactions by item count changes
+Updated trackers.py - Rentals Fixed - Tracks item count by USERNAME
 Tracks all user activities and parses bot embeds
 """
 
@@ -14,25 +14,29 @@ from models import (
 
 logger = logging.getLogger(__name__)
 
-# Track rental item counts per user to detect changes
-RENTAL_ITEM_COUNTS = {}  # Format: {user_id: item_count}
+# Track rental item counts per username to detect changes
+RENTAL_ITEM_COUNTS = {}  # Format: {username: item_count}
 
 
-def get_rental_item_count(desc: str, user_id: str) -> int:
+def get_rental_item_count_by_username(desc: str, username: str) -> int:
     """
     Extract how many items this user is currently renting
-    Looking for pattern like: "Má: @user - Item1, Item2, Item3"
+    Format in embed: "Má: Username"
+    
+    Returns count of items they have listed
     """
-    # Find the section for this user
-    owner_pattern = rf'Má:\s*<@!?{user_id}>\s*-\s*(.+?)(?=\n\n|Má:|$)'
-    match = re.search(owner_pattern, desc, re.DOTALL)
+    # Find section for this user: "Má: Username" followed by items
+    user_pattern = rf'Má:\s+{re.escape(username)}\s*\n([\s\S]*?)(?=Má:|Vzal si|$)'
+    match = re.search(user_pattern, desc)
     
     if not match:
         return 0
     
     items_text = match.group(1)
-    # Count items (split by comma, but also by newline in case of multiline)
-    items = [item.strip() for item in re.split(r'[,\n]', items_text) if item.strip()]
+    # Count item lines (lines with emoji + item name)
+    # Filter out "Dostupný" lines
+    items = [line.strip() for line in items_text.split('\n') 
+             if line.strip() and 'Dostupný' not in line and '✅' not in line and '❌' not in line]
     return len(items)
 
 
@@ -261,46 +265,61 @@ async def parse_party_embed(guild, embed):
 async def parse_rental_embed(guild, embed):
     """Parse Rental bot rental usage (Navrátil)
     
-    Detects item count changes:
+    Detects item count changes by USERNAME (not user ID):
     - If items increased → +1 rental for each new item
     - If items decreased or same → skip (item was returned)
+    
+    Format: "Má: Username\n  🔲 ItemName\n    Dostupný"
     """
     desc = embed.description
     
     if not desc:
         return
     
-    # Find all users with items: "Má: @user - Item1, Item2"
-    owner_pattern = r'Má:\s*<@!?(\d+)>'
+    # Find all users with items: "Má: Username"
+    owner_pattern = r'Má:\s+([^\n]+)'
     matches = re.finditer(owner_pattern, desc)
     
     for match in matches:
-        user_id = match.group(1)
+        username = match.group(1).strip()
         
         try:
             # Get current item count
-            current_count = get_rental_item_count(desc, user_id)
+            current_count = get_rental_item_count_by_username(desc, username)
             
             # Get previous count (default 0 if first time seeing this user)
-            previous_count = RENTAL_ITEM_COUNTS.get(user_id, 0)
+            previous_count = RENTAL_ITEM_COUNTS.get(username, 0)
             
             # Calculate difference
             item_diff = current_count - previous_count
             
             # Only count if items INCREASED (new rental)
             if item_diff > 0:
-                member = await guild.fetch_member(int(user_id))
-                # Add +1 for EACH new item
-                for _ in range(item_diff):
-                    increment_stat(user_id, member.display_name, 'rental_count', 1)
-                    logger.info(f'🔑 {member.display_name} rented new item ({current_count} total)')
+                # Try to find Discord member by username
+                try:
+                    # Search in guild members
+                    member = None
+                    async for m in guild.fetch_members(limit=None):
+                        if m.display_name == username or m.name == username:
+                            member = m
+                            break
+                    
+                    if member:
+                        # Add +1 for EACH new item
+                        for _ in range(item_diff):
+                            increment_stat(str(member.id), member.display_name, 'rental_count', 1)
+                            logger.info(f'🔑 {member.display_name} rented new item ({current_count} total)')
+                    else:
+                        logger.warning(f'🔑 Could not find member "{username}" - rental count +{item_diff} not recorded')
+                
+                except Exception as e:
+                    logger.error(f'Error fetching member {username}: {e}')
             
             elif item_diff < 0:
-                member = await guild.fetch_member(int(user_id))
-                logger.info(f'🔄 {member.display_name} returned item ({current_count} remaining)')
+                logger.info(f'🔄 {username} returned item ({current_count} remaining)')
             
             # Update tracking
-            RENTAL_ITEM_COUNTS[user_id] = current_count
+            RENTAL_ITEM_COUNTS[username] = current_count
             
         except Exception as e:
-            logger.error(f'Error processing rental for {user_id}: {e}')
+            logger.error(f'Error processing rental for {username}: {e}')
