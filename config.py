@@ -34,7 +34,6 @@ STAT_CATEGORIES = {
     'reaction_count': '👍 Reactions Received',
     'apollo_events': '📅 Event Attendance',
     'party_count': '👥 Parties Created',
-    'cp_turnover': '💰 CP Turnover',
     'aq_calls': '📢 AQ UP Calls',
     'screenshot_count': '📸 Screenshots'
 }
