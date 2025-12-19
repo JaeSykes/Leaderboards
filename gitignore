@@ -1,10 +1,7 @@
-.env
-.env.local
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-data/stats.db
-.DS_Store
-*.log
+# Na příkazovém řádku:
+echo "credentials/" >> .gitignore
+echo "backups/" >> .gitignore
+
+git add .gitignore
+git commit -m "🔒 Add: Gitignore for credentials and backups"
+git push
