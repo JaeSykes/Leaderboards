@@ -55,7 +55,7 @@ async def on_ready():
     
     # Initial leaderboard update
     try:
-        await update_leaderboard_task()
+        await update_leaderboard_task(bot)
         logger.info('✅ Initial leaderboard created')
     except Exception as e:
         logger.error(f'Error creating initial leaderboard: {e}')
@@ -77,7 +77,7 @@ async def update_leaderboard(ctx):
     """Manually update leaderboard - Admin only"""
     try:
         await ctx.defer()
-        await update_leaderboard_task()
+        await update_leaderboard_task(bot)
         await ctx.followup.send('✅ Leaderboard updated!')
         logger.info(f'📊 Leaderboard manually updated by {ctx.author.name}')
     except Exception as e:
