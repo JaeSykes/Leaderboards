@@ -12,7 +12,7 @@ from discord.ext import commands
 from config import *
 from models import init_db
 from trackers import setup_trackers
-from scheduler import setup_scheduler
+from scheduler import setup_scheduler, update_leaderboard_task
 
 # Setup logging
 logging.basicConfig(
@@ -53,6 +53,13 @@ async def on_ready():
     setup_scheduler(bot)
     logger.info('✅ Scheduler started')
     
+    # Initial leaderboard update
+    try:
+        await update_leaderboard_task()
+        logger.info('✅ Initial leaderboard created')
+    except Exception as e:
+        logger.error(f'Error creating initial leaderboard: {e}')
+    
     logger.info('🚀 Bot is fully operational!')
     
     # Set bot status
@@ -62,6 +69,20 @@ async def on_ready():
             name="Lineage 2 Stats"
         )
     )
+
+
+@bot.command(name='leaderboard')
+@commands.has_role('Admin')
+async def update_leaderboard(ctx):
+    """Manually update leaderboard - Admin only"""
+    try:
+        await ctx.defer()
+        await update_leaderboard_task()
+        await ctx.followup.send('✅ Leaderboard updated!')
+        logger.info(f'📊 Leaderboard manually updated by {ctx.author.name}')
+    except Exception as e:
+        await ctx.followup.send(f'❌ Error: {str(e)}')
+        logger.error(f'Error updating leaderboard: {e}')
 
 
 @bot.event
