@@ -96,7 +96,7 @@ def setup_trackers(bot):
         if after.guild.id != GUILD_ID:
             return
         
-        if after.user.bot:
+        if after.bot:
             return
         
         user_id = str(after.user.id)
