@@ -39,7 +39,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 @bot.event
 async def on_ready():
     """Bot startup sequence"""
-    logger.info(f'✅ Bot logged in as {bot.user.tag}')
+    logger.info(f'✅ Bot logged in as {bot.user}')
     
     # Initialize database
     init_db()
