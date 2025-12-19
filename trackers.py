@@ -28,7 +28,7 @@ def setup_trackers(bot):
             return
         
         user_id = str(member.id)
-        username = member.name
+        username = member.display_name  # ✅ Server nickname instead of Discord name
         
         # User joined voice
         if not before.channel and after.channel:
@@ -53,7 +53,7 @@ def setup_trackers(bot):
             return
         
         user_id = str(message.author.id)
-        username = message.author.name
+        username = message.author.display_name  # ✅ Server nickname
         
         # Count message
         increment_stat(user_id, username, 'message_count', 1)
@@ -85,7 +85,7 @@ def setup_trackers(bot):
             return
         
         author_id = str(reaction.message.author.id)
-        author_name = reaction.message.author.name
+        author_name = reaction.message.author.display_name  # ✅ Server nickname
         
         increment_stat(author_id, author_name, 'reaction_count', 1)
     
@@ -104,7 +104,7 @@ def setup_trackers(bot):
         # Get member for username
         try:
             member = await after.guild.fetch_member(int(user_id))
-            username = member.name
+            username = member.display_name  # ✅ Server nickname
         except Exception:
             return
         
@@ -157,10 +157,6 @@ async def parse_bot_embeds(bot, message):
         elif bot_username == BOT_NAMES['party_maker'] and embed.description:
             await parse_party_embed(guild, embed)
         
-        # Accounting Bot - CP turnover
-        elif bot_username == BOT_NAMES['accounting'] and embed.title:
-            await parse_accounting_embed(guild, embed)
-        
         # Rental Bot - Rentals
         elif bot_username == BOT_NAMES['rental'] and embed.description:
             await parse_rental_embed(guild, embed)
@@ -184,8 +180,8 @@ async def parse_apollo_embed(guild, embed):
         for user_id in mentions:
             try:
                 member = await guild.fetch_member(int(user_id))
-                increment_stat(user_id, member.name, 'apollo_events', 1)
-                logger.info(f'📅 {member.name} attendance recorded')
+                increment_stat(user_id, member.display_name, 'apollo_events', 1)  # ✅ display_name
+                logger.info(f'📅 {member.display_name} attendance recorded')
             except Exception as e:
                 logger.error(f'Error fetching member {user_id}: {e}')
 
@@ -202,44 +198,10 @@ async def parse_party_embed(guild, embed):
         user_id = match.group(1)
         try:
             member = await guild.fetch_member(int(user_id))
-            increment_stat(user_id, member.name, 'party_count', 1)
-            logger.info(f'👥 {member.name} party counted')
+            increment_stat(user_id, member.display_name, 'party_count', 1)  # ✅ display_name
+            logger.info(f'👥 {member.display_name} party counted')
         except Exception as e:
             logger.error(f'Error fetching member {user_id}: {e}')
-
-
-async def parse_accounting_embed(guild, embed):
-    """Parse Accounting bot CP turnover"""
-    desc = embed.description or ''
-    title = embed.title or ''
-    
-    if 'Nová Transakce' not in title:
-        return
-    
-    # Find amount pattern "Nový pohyb: X Adena"
-    amount_pattern = r'Nový pohyb:\s*([-\d.,]+)\s*Adena'
-    amount_match = re.search(amount_pattern, desc)
-    
-    if amount_match:
-        amount_str = amount_match.group(1).replace(',', '').replace('.', '')
-        try:
-            amount = abs(int(amount_str))
-            
-            # Try to find who made the transaction
-            # Look for mentions in description
-            mentions = re.findall(r'<@!?(\d+)>', desc)
-            
-            if mentions:
-                user_id = mentions[0]
-                try:
-                    member = await guild.fetch_member(int(user_id))
-                    increment_stat(user_id, member.name, 'cp_turnover', amount)
-                    logger.info(f'💰 {member.name} CP turnover: {amount}')
-                except Exception as e:
-                    logger.error(f'Error fetching member {user_id}: {e}')
-        
-        except ValueError:
-            logger.warning(f'Could not parse CP amount: {amount_match.group(1)}')
 
 
 async def parse_rental_embed(guild, embed):
@@ -254,7 +216,7 @@ async def parse_rental_embed(guild, embed):
         user_id = match.group(1)
         try:
             member = await guild.fetch_member(int(user_id))
-            increment_stat(user_id, member.name, 'rental_count', 1)
-            logger.info(f'🔑 {member.name} rental counted')
+            increment_stat(user_id, member.display_name, 'rental_count', 1)  # ✅ display_name
+            logger.info(f'🔑 {member.display_name} rental counted')
         except Exception as e:
             logger.error(f'Error fetching member {user_id}: {e}')
