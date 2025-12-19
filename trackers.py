@@ -1,5 +1,5 @@
 """
-Event Trackers and Embed Parsers
+Event Trackers and Embed Parsers - S DEBUG LOGGINGEM
 Tracks all user activities and parses bot embeds
 """
 
@@ -28,7 +28,7 @@ def setup_trackers(bot):
             return
         
         user_id = str(member.id)
-        username = member.display_name  # ✅ Server nickname instead of Discord name
+        username = member.display_name
         
         # User joined voice
         if not before.channel and after.channel:
@@ -53,7 +53,7 @@ def setup_trackers(bot):
             return
         
         user_id = str(message.author.id)
-        username = message.author.display_name  # ✅ Server nickname
+        username = message.author.display_name
         
         # Count message
         increment_stat(user_id, username, 'message_count', 1)
@@ -85,7 +85,7 @@ def setup_trackers(bot):
             return
         
         author_id = str(reaction.message.author.id)
-        author_name = reaction.message.author.display_name  # ✅ Server nickname
+        author_name = reaction.message.author.display_name
         
         increment_stat(author_id, author_name, 'reaction_count', 1)
     
@@ -104,11 +104,11 @@ def setup_trackers(bot):
         # Get member for username
         try:
             member = await after.guild.fetch_member(int(user_id))
-            username = member.display_name  # ✅ Server nickname
+            username = member.display_name
         except Exception:
             return
         
-        # Find L2Reborn activity (hledá cokoliv s "L2Reborn" v názvu) ✅
+        # Find L2Reborn activity
         old_activity = None
         new_activity = None
         
@@ -148,21 +148,29 @@ async def parse_bot_embeds(bot, message):
     embed = message.embeds[0]
     bot_username = message.author.name
     
+    # 🔍 DEBUG: Loguj jaké jméno vidíš
+    logger.info(f'🔍 [DEBUG] Bot embed from: "{bot_username}" | Hledám: {list(BOT_NAMES.values())}')
+    
     try:
         # Apollo Bot - Event attendance
         if bot_username == BOT_NAMES['apollo'] and embed.description:
+            logger.info(f'✅ [MATCH] Apollo bot detected!')
             await parse_apollo_embed(guild, embed)
         
         # Party Maker Bot - Party creation
         elif bot_username == BOT_NAMES['party_maker'] and embed.description:
+            logger.info(f'✅ [MATCH] Party Maker bot detected!')
             await parse_party_embed(guild, embed)
         
         # Rental Bot - Rentals
         elif bot_username == BOT_NAMES['rental'] and embed.description:
+            logger.info(f'✅ [MATCH] Rental bot detected!')
             await parse_rental_embed(guild, embed)
+        else:
+            logger.info(f'⚠️ [NO MATCH] Bot "{bot_username}" není v BOT_NAMES')
     
     except Exception as e:
-        logger.error(f'Error parsing embed from {bot_username}: {e}')
+        logger.error(f'❌ Error parsing embed from {bot_username}: {e}')
 
 
 async def parse_apollo_embed(guild, embed):
@@ -180,7 +188,7 @@ async def parse_apollo_embed(guild, embed):
         for user_id in mentions:
             try:
                 member = await guild.fetch_member(int(user_id))
-                increment_stat(user_id, member.display_name, 'apollo_events', 1)  # ✅ display_name
+                increment_stat(user_id, member.display_name, 'apollo_events', 1)
                 logger.info(f'📅 {member.display_name} attendance recorded')
             except Exception as e:
                 logger.error(f'Error fetching member {user_id}: {e}')
@@ -198,7 +206,7 @@ async def parse_party_embed(guild, embed):
         user_id = match.group(1)
         try:
             member = await guild.fetch_member(int(user_id))
-            increment_stat(user_id, member.display_name, 'party_count', 1)  # ✅ display_name
+            increment_stat(user_id, member.display_name, 'party_count', 1)
             logger.info(f'👥 {member.display_name} party counted')
         except Exception as e:
             logger.error(f'Error fetching member {user_id}: {e}')
@@ -216,7 +224,7 @@ async def parse_rental_embed(guild, embed):
         user_id = match.group(1)
         try:
             member = await guild.fetch_member(int(user_id))
-            increment_stat(user_id, member.display_name, 'rental_count', 1)  # ✅ display_name
+            increment_stat(user_id, member.display_name, 'rental_count', 1)
             logger.info(f'🔑 {member.display_name} rental counted')
         except Exception as e:
             logger.error(f'Error fetching member {user_id}: {e}')
