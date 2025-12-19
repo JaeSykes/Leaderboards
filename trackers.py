@@ -78,7 +78,11 @@ def setup_trackers(bot):
         if reaction.message.guild is None or reaction.message.guild.id != GUILD_ID:
             return
         
-        if not reaction.message.author or reaction.message.author.bot:
+        # ✅ FIX: Check message author exists and is not a bot
+        if not reaction.message.author:
+            return
+        
+        if reaction.message.author.bot:
             return
         
         if user.bot:
@@ -87,7 +91,9 @@ def setup_trackers(bot):
         author_id = str(reaction.message.author.id)
         author_name = reaction.message.author.display_name
         
+        # ✅ Track reaction
         increment_stat(author_id, author_name, 'reaction_count', 1)
+        logger.info(f'👍 {author_name} received reaction from {user.display_name}')
     
     
     @bot.event
@@ -161,13 +167,13 @@ async def parse_bot_embeds(bot, message):
         elif bot_username == BOT_NAMES['party_maker'] and embed.description:
             await parse_party_embed(guild, embed)
         
-        # Rental Bot - Rentals
+        # Rental Bot - Rentals (Navrátil)
         elif bot_username == BOT_NAMES['rental'] and embed.description:
             await parse_rental_embed(guild, embed)
         
-        # Navrátil Bot - Rentals (fallback)
-        elif bot_username == BOT_NAMES['rental'] and embed.description:
-            await parse_rental_embed(guild, embed)
+        # DEBUG: Log unmatched bot embeds for tracking
+        else:
+            logger.info(f'🔍 [UNMATCHED BOT] "{bot_username}" | Expected: {list(BOT_NAMES.values())}')
     
     except Exception as e:
         logger.error(f'Error parsing embed from {bot_username}: {e}', exc_info=True)
@@ -204,7 +210,7 @@ async def parse_party_embed(guild, embed):
     if not desc:
         return
     
-    # Find party creator "Založatel: @user"
+    # Find party creator "Založatel: @user" or "Zakladatel: @user"
     creator_pattern = r'[Zz]akladatel[a]?:\s*<@!?(\d+)>'
     match = re.search(creator_pattern, desc)
     
@@ -219,7 +225,7 @@ async def parse_party_embed(guild, embed):
 
 
 async def parse_rental_embed(guild, embed):
-    """Parse Rental bot rental usage"""
+    """Parse Rental bot rental usage (Navrátil)"""
     desc = embed.description
     
     if not desc:
