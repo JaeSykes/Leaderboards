@@ -19,9 +19,6 @@ def format_stat_value(stat_name: str, value: int) -> str:
         hours = value // 3600
         minutes = (value % 3600) // 60
         return f'{hours}h {minutes}m'
-    elif stat_name == 'cp_turnover':
-        # Format with thousands separator
-        return f'{value:,} Adena'
     else:
         return str(value)
 
@@ -94,23 +91,7 @@ async def update_leaderboard(bot):
         monthly_msg_id = get_leaderboard_message('monthly')
         overall_msg_id = get_leaderboard_message('overall')
         
-        # Update or send monthly leaderboard
-        if monthly_msg_id:
-            try:
-                msg = await channel.fetch_message(monthly_msg_id)
-                await msg.edit(embed=monthly_embed)
-                logger.info('✅ Monthly leaderboard updated')
-            except discord.NotFound:
-                # Message was deleted, send new one
-                msg = await channel.send(embed=monthly_embed)
-                save_leaderboard_message('monthly', msg.id)
-                logger.info('✅ Monthly leaderboard message recreated')
-        else:
-            msg = await channel.send(embed=monthly_embed)
-            save_leaderboard_message('monthly', msg.id)
-            logger.info('✅ Monthly leaderboard message created')
-        
-        # Update or send overall leaderboard
+        # UPDATE OR SEND OVERALL LEADERBOARD FIRST ✅
         if overall_msg_id:
             try:
                 msg = await channel.fetch_message(overall_msg_id)
@@ -125,6 +106,22 @@ async def update_leaderboard(bot):
             msg = await channel.send(embed=overall_embed)
             save_leaderboard_message('overall', msg.id)
             logger.info('✅ Overall leaderboard message created')
+        
+        # UPDATE OR SEND MONTHLY LEADERBOARD SECOND ✅
+        if monthly_msg_id:
+            try:
+                msg = await channel.fetch_message(monthly_msg_id)
+                await msg.edit(embed=monthly_embed)
+                logger.info('✅ Monthly leaderboard updated')
+            except discord.NotFound:
+                # Message was deleted, send new one
+                msg = await channel.send(embed=monthly_embed)
+                save_leaderboard_message('monthly', msg.id)
+                logger.info('✅ Monthly leaderboard message recreated')
+        else:
+            msg = await channel.send(embed=monthly_embed)
+            save_leaderboard_message('monthly', msg.id)
+            logger.info('✅ Monthly leaderboard message created')
     
     except Exception as e:
         logger.error(f'❌ Error updating leaderboard: {e}')
