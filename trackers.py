@@ -1,5 +1,5 @@
 """
-Event Trackers and Embed Parsers
+Updated trackers.py - Tracks rental interactions by item count changes
 Tracks all user activities and parses bot embeds
 """
 
@@ -13,6 +13,27 @@ from models import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Track rental item counts per user to detect changes
+RENTAL_ITEM_COUNTS = {}  # Format: {user_id: item_count}
+
+
+def get_rental_item_count(desc: str, user_id: str) -> int:
+    """
+    Extract how many items this user is currently renting
+    Looking for pattern like: "Má: @user - Item1, Item2, Item3"
+    """
+    # Find the section for this user
+    owner_pattern = rf'Má:\s*<@!?{user_id}>\s*-\s*(.+?)(?=\n\n|Má:|$)'
+    match = re.search(owner_pattern, desc, re.DOTALL)
+    
+    if not match:
+        return 0
+    
+    items_text = match.group(1)
+    # Count items (split by comma, but also by newline in case of multiline)
+    items = [item.strip() for item in re.split(r'[,\n]', items_text) if item.strip()]
+    return len(items)
 
 
 def setup_trackers(bot):
@@ -70,6 +91,19 @@ def setup_trackers(bot):
                 logger.info(f'📸 {username} posted screenshot')
         
         await bot.process_commands(message)
+    
+    
+    @bot.event
+    async def on_message_edit(before, after):
+        """Track edited messages (catches Navrátil rental updates)"""
+        if after.guild is None or after.guild.id != GUILD_ID:
+            return
+        
+        if not after.author.bot:
+            return
+        
+        # Parse bot embeds on edit (Navrátil updates existing rental embeds)
+        await parse_bot_embeds(bot, after)
     
     
     @bot.event
@@ -167,7 +201,7 @@ async def parse_bot_embeds(bot, message):
         elif bot_username == BOT_NAMES['party_maker'] and embed.description:
             await parse_party_embed(guild, embed)
         
-        # Rental Bot - Rentals (Navrátil)
+        # Rental Bot - Rentals (Navrátil) - Track by item count changes
         elif bot_username == BOT_NAMES['rental'] and embed.description:
             await parse_rental_embed(guild, embed)
         
@@ -225,21 +259,48 @@ async def parse_party_embed(guild, embed):
 
 
 async def parse_rental_embed(guild, embed):
-    """Parse Rental bot rental usage (Navrátil)"""
+    """Parse Rental bot rental usage (Navrátil)
+    
+    Detects item count changes:
+    - If items increased → +1 rental for each new item
+    - If items decreased or same → skip (item was returned)
+    """
     desc = embed.description
     
     if not desc:
         return
     
-    # Find rental owner "Má: @user"
+    # Find all users with items: "Má: @user - Item1, Item2"
     owner_pattern = r'Má:\s*<@!?(\d+)>'
-    match = re.search(owner_pattern, desc)
+    matches = re.finditer(owner_pattern, desc)
     
-    if match:
+    for match in matches:
         user_id = match.group(1)
+        
         try:
-            member = await guild.fetch_member(int(user_id))
-            increment_stat(user_id, member.display_name, 'rental_count', 1)
-            logger.info(f'🔑 {member.display_name} rental counted')
+            # Get current item count
+            current_count = get_rental_item_count(desc, user_id)
+            
+            # Get previous count (default 0 if first time seeing this user)
+            previous_count = RENTAL_ITEM_COUNTS.get(user_id, 0)
+            
+            # Calculate difference
+            item_diff = current_count - previous_count
+            
+            # Only count if items INCREASED (new rental)
+            if item_diff > 0:
+                member = await guild.fetch_member(int(user_id))
+                # Add +1 for EACH new item
+                for _ in range(item_diff):
+                    increment_stat(user_id, member.display_name, 'rental_count', 1)
+                    logger.info(f'🔑 {member.display_name} rented new item ({current_count} total)')
+            
+            elif item_diff < 0:
+                member = await guild.fetch_member(int(user_id))
+                logger.info(f'🔄 {member.display_name} returned item ({current_count} remaining)')
+            
+            # Update tracking
+            RENTAL_ITEM_COUNTS[user_id] = current_count
+            
         except Exception as e:
-            logger.error(f'Error fetching member {user_id}: {e}')
+            logger.error(f'Error processing rental for {user_id}: {e}')
