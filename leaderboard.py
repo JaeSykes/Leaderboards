@@ -1,4 +1,4 @@
-""
+"""
 Leaderboard Generator and Formatter
 Creates beautiful embed messages with top statistics
 """
@@ -58,7 +58,7 @@ def create_leaderboard_embed(stats: dict, table_type: str, limit: int = 4) -> di
             
             for idx, entry in enumerate(leaderboard_data[:limit]):
                 medal = medals[idx] if idx < len(medals) else f'{idx + 1}.'
-                username = entry['username'][:18] # Truncate long names
+                username = entry['username'][:18]
                 formatted_value = format_stat_value(stat_key, entry['value'])
                 lines.append(f'{medal} {username}\n  {formatted_value}')
             
@@ -107,7 +107,6 @@ async def update_leaderboard(bot):
                 await msg.edit(embed=monthly_embed)
                 logger.info('✅ Monthly leaderboard updated')
             except discord.NotFound:
-                # Message was deleted, send new one
                 msg = await channel.send(embed=monthly_embed)
                 save_leaderboard_message('monthly', msg.id)
                 logger.info('✅ Monthly leaderboard message recreated')
@@ -123,7 +122,6 @@ async def update_leaderboard(bot):
                 await msg.edit(embed=overall_embed)
                 logger.info('✅ Overall leaderboard updated')
             except discord.NotFound:
-                # Message was deleted, send new one
                 msg = await channel.send(embed=overall_embed)
                 save_leaderboard_message('overall', msg.id)
                 logger.info('✅ Overall leaderboard message recreated')
